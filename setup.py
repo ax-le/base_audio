@@ -11,7 +11,7 @@ setuptools.setup(
     description="Package for handling audio files.",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://gitlab.inria.fr/amarmore/base_audio",
+    url="https://gitlab.imt-atlantique.fr/a23marmo/base_audio",
     packages=setuptools.find_packages(),
     classifiers=[
         "License :: OSI Approved :: BSD License",
