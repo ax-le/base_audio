@@ -24,7 +24,7 @@ setuptools.setup(
     ],
     license='BSD',
     install_requires=[
-        'librosa >= 0.6.0',
+        'librosa >= 0.10',
         'matplotlib >= 1.5',
         'numpy >= 1.8.0,<1.24',
         'IPython',
