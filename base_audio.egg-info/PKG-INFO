@@ -1,0 +1,27 @@
+Metadata-Version: 2.1
+Name: base-audio
+Version: 0.1.0
+Summary: Package for handling audio files.
+Home-page: https://gitlab.inria.fr/amarmore/base_audio
+Author: Marmoret Axel
+Author-email: axel.marmoret@imt-atlantique.fr
+License: BSD
+Platform: UNKNOWN
+Classifier: License :: OSI Approved :: BSD License
+Classifier: Programming Language :: Python
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: Science/Research
+Classifier: Topic :: Multimedia :: Sound/Audio :: Analysis
+Classifier: Programming Language :: Python :: 3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE.md
+License-File: AUTHORS
+
+# base_audio: a small package for the standard audio to spectrogram and spctrogram to audio conversion
+Small package encapsulating the general tools I use to convert audio signals into spectrograms, and spectrograms into audio signals.
+
+Not particularly intended to be shared, but is left open as it may help people.
+
+Don't hesitate to reach me if you have comments! mail: axel.marmoret at imt-atlantique.fr
+

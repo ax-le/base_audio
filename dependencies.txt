@@ -1,0 +1,5 @@
+- IPython
+- librosa
+- matplotlib
+- mir_eval
+- numpy
