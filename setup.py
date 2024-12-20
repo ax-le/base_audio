@@ -26,7 +26,7 @@ setuptools.setup(
     install_requires=[
         'librosa >= 0.10',
         'matplotlib >= 1.5',
-        'numpy >= 1.8.0,<1.24',
+        'numpy >= 1.8.0',
         'IPython',
         'mir_eval',
     ]
