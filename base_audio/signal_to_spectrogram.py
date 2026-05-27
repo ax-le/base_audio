@@ -2,13 +2,18 @@
 """
 Created on July 2024, based on old code.
 
-@author: a23marmo
+@authors: 
+- ax-le
+- mahamat9
 
 Computing spectrogram in different feature description.
 
 Note that Mel (and variants of Mel) spectrograms follow the particular definition of [1].
 
 Spectrogram computation is done with the toolbox librosa [2].
+
+PCEN [3] and LTSA [4] were added by Mahamat Nour Bachar Mahamat (m25maham - github.com/mahamat9).
+Code for LTSA was inspired from https://github.com/tryan/LTSA.
 
 References
 ----------
@@ -18,6 +23,15 @@ In ISMIR (pp. 531-537).
 
 [2] McFee, B., et al. (2024). librosa/librosa: 0.10.2.post1 (0.10.2.post1). 
 Zenodo. https://doi.org/10.5281/zenodo.11192913
+
+[3] Lostanlen, V., Salamon, J., Cartwright, M., McFee, B., Farnsworth, A., Kelling, S., & Bello, J. P. (2018). 
+Per-channel energy normalization: Why and how. 
+IEEE Signal Processing Letters, 26(1), 39-43.
+
+[4] Lin, T. H., Akamatsu, T., & Tsao, Y. (2021). 
+Sensing ecosystem dynamics via audio source separation: 
+A case study of marine soundscapes off northeastern Taiwan. 
+PLoS Computational Biology, 17(2), e1008698.
 """
 
 import numpy as np
@@ -30,13 +44,28 @@ import warnings
 
 mel_power = 2 # Power of the mel spectrogram
 
+default_pcen_params = dict( # Default values found by Mahamat.
+            time_constant=1.0,      # 1-2 secondes (pas 0.4)
+            gain=1.0,               # Gain maximal pour supprimer le bruit de fond
+            bias=2,                 # Peut être ajusté à 5-10 si l'environnement est très bruité
+            power=0.25,             # 0.25 pour sources distantes (pas 0.5)
+            eps=1e-6               # Valeur standard
+)
+default_pcen_params_noisy = dict( # Default values found by Mahamat.
+            time_constant=2.0,      # Plus long pour environnements très bruyants
+            gain=0.9,               # Légèrement réduit pour éviter la distorsion
+            bias=10,                # Bias plus élevé pour améliorer le SNR
+            power=0.25,             # Maintenu pour sources distantes
+            eps=1e-6
+)
+
 class FeatureObject():
     """
     FeatureObject class, which computes different types of spectrograms.
     All these spectrograms are computed with the toolbox librosa [2].
     """
 
-    def __init__(self, sr, feature, hop_length, n_fft=2048, fmin = 0, fmax=None, mel_grill = True, n_mels=80):
+    def __init__(self, sr, feature, hop_length, n_fft=2048, fmin = 0, fmax=None, mel_grill = True, n_mels=80, pcen_params = default_pcen_params, ltsa_time_per_frame = 0.5, ltsa_aggregation_fn = np.median):
         """
         Constructor of the FeatureObject class.
 
@@ -55,6 +84,9 @@ class FeatureObject():
                 - "minmax_log_mel" : Min-Max Log Mel spectrogram (i.e. (log mel + min(log mel)) / max(log mel)
                 - "stft" : Short-Time Fourier Transform
                 - "stft_complex" : Complex Short-Time Fourier Transform
+                - "pcen" : Per-channel energy normalization
+                - "ltsa" : Long-term spectral average
+                - "ltsa_pcen" : Long-term spectral average with per-channel energy normalization
         hop_length : integer
             The desired hop_length, which is the step between two frames (ie the time "discretization" step)
             It is expressed in terms of number of samples, which are defined by the sampling rate.
@@ -79,6 +111,10 @@ class FeatureObject():
         self.fmax = fmax
         self.mel_grill = mel_grill
         self.n_mels = n_mels
+        self.pcen_params = pcen_params
+        self.ltsa_time_per_frame = ltsa_time_per_frame
+        self.ltsa_samples_per_frame = int(self.sr * self.ltsa_time_per_frame)
+        self.ltsa_aggregation_fn = ltsa_aggregation_fn
 
         match self.feature:
             case "pcp":
@@ -88,6 +124,8 @@ class FeatureObject():
             case "mel" | "log_mel" | "nn_log_mel" | "padded_log_mel" | "minmax_log_mel":
                 self.frequency_dimension = self.n_mels
             case "stft" | "stft_complex":
+                self.frequency_dimension = self.n_fft // 2 + 1
+            case "pcen" | "ltsa" | "ltsa_pcen":
                 self.frequency_dimension = self.n_fft // 2 + 1
             case _:
                 raise err.InvalidArgumentValueException(f"Unknown signal representation: {self.feature}.")
@@ -129,6 +167,13 @@ class FeatureObject():
                 return self._compute_stft(signal, complex = False)
             case "stft_complex":
                 return self._compute_stft(signal, complex = True)
+
+            case "pcen":
+                return self._compute_pcen(signal)
+            case "ltsa":
+                return self._compute_ltsa(signal)
+            case "ltsa_pcen":
+                return self._compute_ltsa_pcen(signal)
         
             case _:
                 raise err.InvalidArgumentValueException(f"Unknown signal representation: {self.feature}.")
@@ -162,7 +207,66 @@ class FeatureObject():
             return mag, phase
         else:
             return np.abs(stft)
+    
+    def _compute_pcen(self, signal):    
+        """
+        Computes the Per-Channel Energy Normalization (PCEN) of the signal.
+
+        Parameters
+        ----------
+        signal : numpy array
+            Signal of the song.
+
+        Returns
+        -------
+        numpy array
+            PCEN of the signal.
+
+        References
+        ----------
+        [1] Lostanlen, V., Salamon, J., Cartwright, M., McFee, B., Farnsworth, A., Kelling, S., & Bello, J. P. (2018). 
+        Per-channel energy normalization: Why and how. 
+        IEEE Signal Processing Letters, 26(1), 39-43.
+        """
+        stft = self._compute_stft(signal, complex=False)
+        pcen = librosa.pcen(stft, sr=self.sr, hop_length=self.hop_length, **self.pcen_params)
+        return pcen
+
+    def _compute_ltsa(self, signal):
+        """
+        Compute LTSA or LTSA-PCEN.
         
+        Parameters
+        ----------
+        signal : numpy array
+            Signal of the song.
+        Returns
+        -------
+        numpy array
+            LTSA or LTSA-PCEN of the signal.
+
+        References
+        ----------
+        [1] Lin, T. H., Akamatsu, T., & Tsao, Y. (2021). 
+        Sensing ecosystem dynamics via audio source separation: 
+        A case study of marine soundscapes off northeastern Taiwan. 
+        PLoS Computational Biology, 17(2), e1008698.
+        """
+        signal = pad_signal(signal, self.ltsa_samples_per_frame) #pad signal to fit ltsa_samples_per_frame segments
+        n_divs = len(signal) // self.ltsa_samples_per_frame
+        signal_reshaped = signal.reshape(n_divs, self.ltsa_samples_per_frame)
+
+        ltsa_list = []
+        for segment in signal_reshaped:
+            if self.feature == 'ltsa':
+                spec = self._compute_stft(segment, complex=False)  # STFT for each segment
+            elif self.feature == 'ltsa_pcen':
+                spec = self._compute_pcen(segment)
+            S = self.ltsa_aggregation_fn(spec, axis=1) # Median by default, because appears to work best for BioDCASE data
+            ltsa_list.append(S)
+        ltsa = np.stack(ltsa_list, axis=1)
+        return ltsa
+
     def get_stft_from_mel(self, mel_spectrogram, feature=None):
         if feature is None: # Recursive function, so it takes the feature as an argument
             feature = self.feature # Default case takes the object feature as the feature to compute
@@ -184,7 +288,7 @@ class FeatureObject():
 
             case _:
                 raise err.InvalidArgumentValueException("Unknown feature representation.")
-    
+
     def load_file_compute_spectrogram(self, file_path):
         """
         A wrapper to load a file and compute the spectrogram.
