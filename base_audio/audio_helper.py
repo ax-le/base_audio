@@ -5,15 +5,15 @@ Created on June 2024
 
 Functions to listen to audio signals and spectrograms.
 Also contains a function to compute the SDR between two audio signals.
-These wrappers are useful to avoid importing IPython.display and mir_eval in the main scripts and rewrite the same code.
+These wrappers are useful to avoid importing IPython.display in the main scripts and rewrite the same code.
 """
 import IPython.display as ipd
-import mir_eval
+#import mir_eval # Install mir_eval if you need it, but should not be necessary for most use cases
 import numpy as np
 
 import base_audio.spectrogram_to_signal as spec_to_sig
 
-# %% Audio listening
+# %% Audio listening
 def listen_to_this_spectrogram(spectrogram, feature_object, phase_retrieval = "griffin_lim", original_phase = None):
     """
     Inverts the spectrogram using the istft method, and plots the audio using IPython.diplay.audio.
@@ -49,12 +49,13 @@ def listen_to_this_signal(signal, sr=44100):
     """
     return ipd.display(ipd.Audio(data=signal, rate=sr))
 
-# %% Audio evaluation
-def compute_sdr(audio_ref, audio_estimate):
-    """
-    Function encapsulating the SDR computation in mir_eval.
-    SDR is computed between 'audio_ref' and 'audio_estimate'.
-    """
-    if (audio_estimate == 0).all():
-        return -np.inf
-    return mir_eval.separation.bss_eval_sources(np.array([audio_ref]), np.array([audio_estimate]))[0][0]
+# %% Audio evaluation
+## Install mir_eval if you need it, but should not be necessary for most use cases
+# def compute_sdr(audio_ref, audio_estimate):
+#     """
+#     Function encapsulating the SDR computation in mir_eval.
+#     SDR is computed between 'audio_ref' and 'audio_estimate'.
+#     """
+#     if (audio_estimate == 0).all():
+#         return -np.inf
+#     return mir_eval.separation.bss_eval_sources(np.array([audio_ref]), np.array([audio_estimate]))[0][0]

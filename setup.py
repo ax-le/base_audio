@@ -28,6 +28,5 @@ setuptools.setup(
         'matplotlib >= 1.5',
         'numpy >= 1.8.0',
         'IPython',
-        'mir_eval',
     ]
 )
