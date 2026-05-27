@@ -48,6 +48,7 @@ class FeatureObject():
             The types of spectrograms to compute:
                 - "pcp" : Pitch Class Profile
                 - "cqt" : Constant-Q Transform
+                - "vqt" : Variable-Q Transform
                 - "mel" : Mel spectrogram
                 - "log_mel" : Log Mel spectrogram
                 - "nn_log_mel" : Nonnegative Log Mel spectrogram (i.e. log (mel + 1))
@@ -116,6 +117,9 @@ class FeatureObject():
         
             case "cqt":
                 return self._compute_cqt(signal)
+
+            case "vqt":
+                return self._compute_vqt(signal)
         
             # For Mel spectrograms, by default we use the same parameters as the ones of [1].
             case "mel":
@@ -145,9 +149,13 @@ class FeatureObject():
                                     norm=norm, win_len_smooth=win_len_smooth)
 
     def _compute_cqt(self, signal):
-        constant_q_transf = librosa.cqt(y=signal, sr = self.sr, hop_length = self.hop_length)
+        constant_q_transf = librosa.cqt(y=signal, sr = self.sr, hop_length = self.hop_length, fmin = self.fmin)
         return np.abs(constant_q_transf)
 
+    def _compute_vqt(self, signal):
+        variable_q_transf = librosa.vqt(y=signal, sr = self.sr, hop_length = self.hop_length, fmin = self.fmin)
+        return np.abs(variable_q_transf)
+    
     def _compute_mel_spectrogram(self, signal):
         if self.mel_grill:
             mel = librosa.feature.melspectrogram(y=signal, sr = self.sr, n_fft=2048, hop_length = self.hop_length, n_mels=80, fmin=80.0, fmax=16000, power=2)
