@@ -65,7 +65,7 @@ class FeatureObject():
     All these spectrograms are computed with the toolbox librosa [2].
     """
 
-    def __init__(self, sr, feature, hop_length, n_fft=2048, fmin = 0, fmax=None, mel_grill = True, n_mels=80, pcen_params = default_pcen_params, ltsa_time_per_frame = 0.5, ltsa_aggregation_fn = np.median):
+    def __init__(self, sr, feature, hop_length, n_fft=2048, fmin = 32.70, fmax=None, bins_per_octave = 12, mel_grill = True, n_mels=80, pcen_params = default_pcen_params, ltsa_time_per_frame = 0.5, ltsa_aggregation_fn = np.median):
         """
         Constructor of the FeatureObject class.
 
@@ -110,6 +110,7 @@ class FeatureObject():
         self.n_fft = n_fft
         self.fmin = fmin
         self.fmax = fmax
+        self.bins_per_octave = bins_per_octave
         self.mel_grill = mel_grill
         self.n_mels = n_mels
         self.pcen_params = pcen_params
@@ -196,11 +197,15 @@ class FeatureObject():
                                     norm=norm, win_len_smooth=win_len_smooth)
 
     def _compute_cqt(self, signal):
-        constant_q_transf = librosa.cqt(y=signal, sr = self.sr, hop_length = self.hop_length, fmin = self.fmin)
+        n_bins = self.bins_per_octave * 8 #8 est une borne sup du nombre d'octaves sur un piano, qui contient 88 notes
+        constant_q_transf = librosa.cqt(y=signal, sr = self.sr, hop_length = self.hop_length, fmin = self.fmin,
+                                        n_bins=n_bins, bins_per_octave = self.bins_per_octave)
         return np.abs(constant_q_transf)
 
     def _compute_vqt(self, signal):
-        variable_q_transf = librosa.vqt(y=signal, sr = self.sr, hop_length = self.hop_length, fmin = self.fmin)
+        n_bins = self.bins_per_octave * 8 #8 est une borne sup du nombre d'octaves sur un piano, qui contient 88 notes
+        variable_q_transf = librosa.vqt(y=signal, sr = self.sr, hop_length = self.hop_length, fmin = self.fmin,
+                                        n_bins=n_bins, bins_per_octave = self.bins_per_octave)
         return np.abs(variable_q_transf)
     
     def _compute_mel_spectrogram(self, signal):
