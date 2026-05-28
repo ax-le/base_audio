@@ -122,6 +122,8 @@ class FeatureObject():
                 self.frequency_dimension = 12
             case "cqt":
                 self.frequency_dimension = 84
+            case "vqt":
+                self.frequency_dimension = 84
             case "mel" | "log_mel" | "nn_log_mel" | "padded_log_mel" | "minmax_log_mel":
                 self.frequency_dimension = self.n_mels
             case "stft" | "stft_complex":
