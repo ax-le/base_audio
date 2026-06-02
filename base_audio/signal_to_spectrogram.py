@@ -123,10 +123,8 @@ class FeatureObject():
         match self.feature:
             case "pcp":
                 self.frequency_dimension = 12
-            case "cqt":
-                self.frequency_dimension = 8 * self.bins_per_octave
-            case "vqt":
-                self.frequency_dimension = 8 * self.bins_per_octave
+            case "cqt" | "vqt":
+                self.frequency_dimension = self.octave_number * self.bins_per_octave
             case "mel" | "log_mel" | "nn_log_mel" | "padded_log_mel" | "minmax_log_mel":
                 self.frequency_dimension = self.n_mels
             case "stft" | "stft_complex":
@@ -179,11 +177,9 @@ class FeatureObject():
 
             case "pcen":
                 return self._compute_pcen(signal)
-            case "ltsa":
+            case "ltsa" | "ltsa_pcen":
                 return self._compute_ltsa(signal)
-            case "ltsa_pcen":
-                return self._compute_ltsa_pcen(signal)
-        
+
             case _:
                 raise err.InvalidArgumentValueException(f"Unknown signal representation: {self.feature}.")
         
@@ -252,6 +248,8 @@ class FeatureObject():
     def _compute_ltsa(self, signal):
         """
         Compute LTSA or LTSA-PCEN.
+
+        This method returns one aggregated spectrum per LTSA time subdivision.
         
         Parameters
         ----------
@@ -269,17 +267,18 @@ class FeatureObject():
         A case study of marine soundscapes off northeastern Taiwan. 
         PLoS Computational Biology, 17(2), e1008698.
         """
-        signal = pad_signal(signal, self.ltsa_samples_per_frame) #pad signal to fit ltsa_samples_per_frame segments
-        n_divs = len(signal) // self.ltsa_samples_per_frame
-        signal_reshaped = signal.reshape(n_divs, self.ltsa_samples_per_frame)
+        if len(signal) == 0:
+            raise err.InvalidArgumentValueException("Signal is empty.")
 
+        if self.feature == 'ltsa':
+            spec = self._compute_stft(signal, complex=False)
+        elif self.feature == 'ltsa_pcen':
+            spec = self._compute_pcen(signal)
+
+        cols_per_ltsa_frame = max(1, self.ltsa_samples_per_frame // self.hop_length)
         ltsa_list = []
-        for segment in signal_reshaped:
-            if self.feature == 'ltsa':
-                spec = self._compute_stft(segment, complex=False)  # STFT for each segment
-            elif self.feature == 'ltsa_pcen':
-                spec = self._compute_pcen(segment)
-            S = self.ltsa_aggregation_fn(spec, axis=1) # Median by default, because appears to work best for BioDCASE data
+        for i in range(0, spec.shape[1], cols_per_ltsa_frame):
+            S = self.ltsa_aggregation_fn(spec[:, i:i + cols_per_ltsa_frame], axis=1) # Median by default, because appears to work best for BioDCASE data
             ltsa_list.append(S)
         ltsa = np.stack(ltsa_list, axis=1)
         return ltsa
