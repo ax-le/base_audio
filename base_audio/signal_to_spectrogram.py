@@ -65,7 +65,7 @@ class FeatureObject():
     All these spectrograms are computed with the toolbox librosa [2].
     """
 
-    def __init__(self, sr, feature, hop_length, n_fft=2048, fmin = 32.70, fmax=None, bins_per_octave = 12, mel_grill = True, n_mels=80, pcen_params = default_pcen_params, ltsa_time_per_frame = 0.5, ltsa_aggregation_fn = np.median):
+    def __init__(self, sr, feature, hop_length, n_fft=2048, fmin = 32.70, fmax=None, octave_number=8, bins_per_octave = 12, vqt_gamma=None, mel_grill = True, n_mels=80, pcen_params = default_pcen_params, ltsa_time_per_frame = 0.5, ltsa_aggregation_fn = np.median):
         """
         Constructor of the FeatureObject class.
 
@@ -110,7 +110,9 @@ class FeatureObject():
         self.n_fft = n_fft
         self.fmin = fmin
         self.fmax = fmax
+        self.octave_number = octave_number
         self.bins_per_octave = bins_per_octave
+        self.vqt_gamma = vqt_gamma
         self.mel_grill = mel_grill
         self.n_mels = n_mels
         self.pcen_params = pcen_params
@@ -122,9 +124,9 @@ class FeatureObject():
             case "pcp":
                 self.frequency_dimension = 12
             case "cqt":
-                self.frequency_dimension = 84
+                self.frequency_dimension = 8 * self.bins_per_octave
             case "vqt":
-                self.frequency_dimension = 84
+                self.frequency_dimension = 8 * self.bins_per_octave
             case "mel" | "log_mel" | "nn_log_mel" | "padded_log_mel" | "minmax_log_mel":
                 self.frequency_dimension = self.n_mels
             case "stft" | "stft_complex":
@@ -188,7 +190,7 @@ class FeatureObject():
     def _compute_pcp(self, signal):
         norm=inf # Columns normalization
         win_len_smooth=82 # Size of the smoothign window
-        n_octaves=6
+        n_octaves=self.octave_number
         bins_per_chroma = 3
         bins_per_octave=bins_per_chroma * 12
         fmin=self.fmin
@@ -197,15 +199,15 @@ class FeatureObject():
                                     norm=norm, win_len_smooth=win_len_smooth)
 
     def _compute_cqt(self, signal):
-        n_bins = self.bins_per_octave * 8 #8 est une borne sup du nombre d'octaves sur un piano, qui contient 88 notes
+        n_bins = self.bins_per_octave * self.octave_number
         constant_q_transf = librosa.cqt(y=signal, sr = self.sr, hop_length = self.hop_length, fmin = self.fmin,
                                         n_bins=n_bins, bins_per_octave = self.bins_per_octave)
         return np.abs(constant_q_transf)
 
     def _compute_vqt(self, signal):
-        n_bins = self.bins_per_octave * 8 #8 est une borne sup du nombre d'octaves sur un piano, qui contient 88 notes
+        n_bins = self.bins_per_octave * self.octave_number 
         variable_q_transf = librosa.vqt(y=signal, sr = self.sr, hop_length = self.hop_length, fmin = self.fmin,
-                                        n_bins=n_bins, bins_per_octave = self.bins_per_octave)
+                                        n_bins=n_bins, gamma=self.vqt_gamma, bins_per_octave = self.bins_per_octave)
         return np.abs(variable_q_transf)
     
     def _compute_mel_spectrogram(self, signal):
