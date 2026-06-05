@@ -115,7 +115,9 @@ class FeatureObject():
         self.vqt_gamma = vqt_gamma
         self.mel_grill = mel_grill
         self.n_mels = n_mels
-        self.pcen_params = pcen_params
+        if pcen_params is None:
+            pcen_params = default_pcen_params
+        self.pcen_params = pcen_params.copy() # Avoid mutable default argument
         self.ltsa_time_per_frame = ltsa_time_per_frame
         self.ltsa_samples_per_frame = int(self.sr * self.ltsa_time_per_frame)
         self.ltsa_aggregation_fn = ltsa_aggregation_fn
