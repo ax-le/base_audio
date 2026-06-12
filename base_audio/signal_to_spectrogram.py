@@ -129,9 +129,7 @@ class FeatureObject():
                 self.frequency_dimension = self.octave_number * self.bins_per_octave
             case "mel" | "log_mel" | "nn_log_mel" | "padded_log_mel" | "minmax_log_mel":
                 self.frequency_dimension = self.n_mels
-            case "stft" | "stft_complex":
-                self.frequency_dimension = self.n_fft // 2 + 1
-            case "pcen" | "ltsa" | "ltsa_pcen":
+            case "stft" | "stft_complex" | "pcen" | "ltsa" | "ltsa_pcen":
                 self.frequency_dimension = self.n_fft // 2 + 1
             case _:
                 raise err.InvalidArgumentValueException(f"Unknown signal representation: {self.feature}.")
