@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="base_audio",
-    version="0.1.2",
+    version="0.1.3",
     author="Marmoret Axel",
     author_email="axel.marmoret@imt-atlantique.fr",
     description="Package for handling audio files.",

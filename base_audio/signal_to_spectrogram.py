@@ -5,6 +5,7 @@ Created on July 2024, based on old code.
 @authors: 
 - ax-le
 - mahamat9
+- BaptisteHi
 
 Computing spectrogram in different feature description.
 
